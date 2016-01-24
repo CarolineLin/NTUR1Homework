@@ -1,0 +1,43 @@
+getwd()
+setwd("/Users/Caroline/GitHub/NTUTrainRL1-master/")
+country<- read.table('trainuser2/data/countries.csv', header=TRUE, sep=',',stringsAsFactors=TRUE)
+age<- read.table('trainuser2/data/ageCountries.csv', header=TRUE, sep=',',stringsAsFactors=TRUE)
+webaction<- read.table('trainuser2/sessions.csv', header=TRUE, sep=',',stringsAsFactors=TRUE)
+trainuser<- read.table('trainuser2/train_users_2.csv', header=TRUE, sep=',',stringsAsFactors=TRUE)
+testuser<- read.table('trainuser2/data/test_users.csv', header=TRUE, sep=',',stringsAsFactors=TRUE)
+
+#查看變數
+names(country)
+names(age)
+names(webaction)
+names(trainuser)
+names(testuser)
+
+d1<- merge(country, age, by="country_destination", all.x = TRUE) 
+
+names(trainuser)[1] <- "user_id"
+names(testuser)[1] <- "user_id"
+d2<- merge(trainuser, testuser, by="user_id", all.x = TRUE) 
+
+d3<- merge(d2, webaction, by="user_id", all.x = TRUE) 
+
+library(sqldf)
+d3$action_type[d3$action_type==''] <- '-unknown-'
+d3actiontype <- sqldf("select user_id,
+    case when action_type=d='booking_request' then 'booking_request'
+        when action_type=='booking_response' then 'booking_response'
+        when action_type=='click' then 'click'
+        when action_type=='data' then 'data'
+        when action_type=='message_post' then 'message_post'
+        when action_type=='modify' then 'modify'
+        when action_type=='partner_callback' then 'partner_callback'
+        when action_type=='submit' then 'submit'
+        when action_type=='view' then 'view'
+    else 'other_action_types' end as action_type,
+         sum(secs_elapsed) as secs_elapsed
+        from d3 group by user_id, action_type
+  ")
+
+write.csv(d3actiontype, "actiontype.csv", row.names=FALSE)
+
+
